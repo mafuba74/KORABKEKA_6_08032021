@@ -1,18 +1,30 @@
 const express = require('express');
+const dotenv = require('dotenv').config();
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
+const path = require('path');
+
+const rateLimit = require('express-rate-limit');
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per windowMs
+});
+
+const helmet = require('helmet');
 
 const sauceRoutes = require('./routes/sauces');
 const userRoutes = require('./routes/user');
 
 const app = express();
-mongoose.connect('mongodb+srv://projet6:lol123lol@cluster0.fppyd.mongodb.net/myFirstDatabase?retryWrites=true&w=majority',
+mongoose.connect(process.env.DB_CONNECT,
   { useNewUrlParser: true,
     useUnifiedTopology: true })
   .then(() => console.log('Connexion à MongoDB réussie !'))
   .catch(() => console.log('Connexion à MongoDB échouée !'));
 
 app.use(bodyParser.json());  
+
+app.use(helmet());
 
 app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -21,6 +33,8 @@ app.use((req, res, next) => {
     next();
   });
 
+app.use(limiter);
+app.use('/images', express.static(path.join(__dirname,'images')));
 
 app.use('/api/sauces', sauceRoutes);
 app.use('/api/auth', userRoutes);
